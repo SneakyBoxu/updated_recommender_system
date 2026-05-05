@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Item Recommendations{% endblock %}
+{% block page_title %}Item Recommendations{% endblock %}
+
+{% block content %}
+<div class="analysis-layout">
+
+  <!-- Controls -->
+  <div class="card controls-card">
+    <div class="card-header">
+      <h2 class="card-title">Personalised Item Recommendations</h2>
+      <span class="badge badge-yellow">SVD · NMF</span>
+    </div>
+    <p class="card-desc">Generate top-N item recommendations for any user using the SVD or NMF latent factor model. Run the respective analysis tab first.</p>
+    <div class="controls-row">
+      <div class="control-group">
+        <label class="control-label" for="rec-user">User ID</label>
+        <select id="rec-user" class="control-input">
+          {% for u in users %}
+          <option value="{{ u }}">{{ u }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="rec-method">Method</label>
+        <select id="rec-method" class="control-input">
+          <option value="svd">SVD</option>
+          <option value="nmf">NMF</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="rec-n"># Recommendations</label>
+        <input type="number" id="rec-n" class="control-input" value="10" min="1" max="50" />
+      </div>
+      <button class="btn btn-primary btn-yellow" id="rec-run-btn">
+        <span class="btn-icon">⭐</span> Get Recommendations
+      </button>
+    </div>
+  </div>
+
+  <!-- User Profile -->
+  <div class="card mt-4 hidden" id="rec-user-card">
+    <div class="card-header">
+      <h2 class="card-title">User Profile</h2>
+      <span class="badge" id="rec-user-badge">—</span>
+    </div>
+    <div class="profile-grid" id="rec-profile-grid"></div>
+  </div>
+
+  <!-- Recommendations Table -->
+  <div class="card mt-4 hidden" id="rec-results-card">
+    <div class="card-header">
+      <h2 class="card-title">Recommended Items</h2>
+      <span class="badge badge-yellow" id="rec-method-badge">—</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="rec-table">
+        <thead id="rec-thead"></thead>
+        <tbody id="rec-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Current Ratings -->
+  <div class="card mt-4 hidden" id="rec-rated-card">
+    <div class="card-header">
+      <h2 class="card-title">User's Current Ratings</h2>
+      <span class="badge" id="rec-total-rated">—</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="rec-rated-table">
+        <thead><tr><th>Item ID</th><th>Rating</th></tr></thead>
+        <tbody id="rec-rated-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.getElementById('rec-run-btn').addEventListener('click', async () => {
+  const userId = document.getElementById('rec-user').value;
+  const method = document.getElementById('rec-method').value;
+  const n = parseInt(document.getElementById('rec-n').value) || 10;
+  const btn = document.getElementById('rec-run-btn');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Loading…';
+  hideElements(['rec-user-card', 'rec-results-card', 'rec-rated-card']);
+
+  try {
+    const res = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, method, n }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      showToast(data.error, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-icon">⭐</span> Get Recommendations';
+      return;
+    }
+
+    // User profile
+    const profileGrid = document.getElementById('rec-profile-grid');
+    profileGrid.innerHTML = '';
+    for (const [k, v] of Object.entries(data.user_info)) {
+      profileGrid.innerHTML += `<div class="profile-chip"><div class="profile-key">${k.replace(/_/g,' ')}</div><div class="profile-val">${v}</div></div>`;
+    }
+    document.getElementById('rec-user-badge').textContent = `ID: ${userId}`;
+    showElements(['rec-user-card']);
+
+    // Recommendations table
+    const recs = data.recommendations;
+    if (recs.length > 0) {
+      const cols = Object.keys(recs[0]);
+      const thead = document.getElementById('rec-thead');
+      thead.innerHTML = '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
+
+      const tbody = document.getElementById('rec-tbody');
+      tbody.innerHTML = '';
+      recs.forEach((row, i) => {
+        let cells = cols.map(c => {
+          const val = row[c];
+          if (c === 'predicted_rating') return `<td><span class="rating-chip">${typeof val === 'number' ? val.toFixed(2) : val}</span></td>`;
+          return `<td>${val ?? '—'}</td>`;
+        }).join('');
+        tbody.innerHTML += `<tr>${cells}</tr>`;
+      });
+
+      document.getElementById('rec-method-badge').textContent = method.toUpperCase();
+      showElements(['rec-results-card']);
+    }
+
+    // Current ratings
+    const ratedBody = document.getElementById('rec-rated-body');
+    ratedBody.innerHTML = '';
+    data.current_ratings.forEach(r => {
+      ratedBody.innerHTML += `<tr><td>${r.item_id}</td><td><span class="rating-chip">${r.rating}</span></td></tr>`;
+    });
+    document.getElementById('rec-total-rated').textContent = `${data.total_rated} rated`;
+    showElements(['rec-rated-card']);
+
+    showToast(`Loaded ${recs.length} recommendations for User ${userId}`, 'success');
+  } catch (e) {
+    showToast('Request failed: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span class="btn-icon">⭐</span> Get Recommendations';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}PCA Visualization{% endblock %}
+{% block page_title %}PCA Visualization{% endblock %}
+
+{% block content %}
+<div class="analysis-layout">
+
+  <!-- Controls -->
+  <div class="card controls-card">
+    <div class="card-header">
+      <h2 class="card-title">Principal Component Analysis</h2>
+      <span class="badge badge-orange">Dimensionality Reduction</span>
+    </div>
+    <p class="card-desc">PCA projects the high-dimensional user-item space onto principal components, enabling visual exploration and variance analysis of user preferences.</p>
+    <div class="controls-row">
+      <div class="control-group">
+        <label class="control-label" for="pca-n">Components (k)</label>
+        <input type="number" id="pca-n" class="control-input" value="10" min="2" max="50" />
+      </div>
+      <button class="btn btn-primary btn-orange" id="pca-run-btn">
+        <span class="btn-icon">▶</span> Run PCA
+      </button>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-row hidden" id="pca-metrics-row">
+    <div class="metric-chip" style="--accent:#f97316">
+      <div class="metric-val" id="pca-variance">—</div>
+      <div class="metric-lab">Total Variance Explained</div>
+    </div>
+    <div class="metric-chip" style="--accent:#2dd4bf">
+      <div class="metric-val" id="pca-pc1">—</div>
+      <div class="metric-lab">PC1 Variance</div>
+    </div>
+    <div class="metric-chip" style="--accent:#6c63ff">
+      <div class="metric-val" id="pca-pc2">—</div>
+      <div class="metric-lab">PC2 Variance</div>
+    </div>
+    <div class="metric-chip" style="--accent:#facc15">
+      <div class="metric-val" id="pca-k">—</div>
+      <div class="metric-lab">Components</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card mt-4 hidden" id="pca-chart-card">
+    <div class="card-header">
+      <h2 class="card-title">Scree Plot &amp; User Projection</h2>
+    </div>
+    <div id="pca-chart-wrap">
+      <div class="placeholder-inner">Loading chart…</div>
+    </div>
+  </div>
+
+  <!-- Variance Table -->
+  <div class="card mt-4 hidden" id="pca-table-card">
+    <div class="card-header">
+      <h2 class="card-title">Component Breakdown</h2>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="pca-table">
+        <thead><tr><th>PC</th><th>Variance (%)</th><th>Cumulative (%)</th></tr></thead>
+        <tbody id="pca-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Live Log -->
+  <div class="log-panel">
+    <div class="log-header">
+      <span class="log-title">⚡ Live Process Log</span>
+      <button class="log-clear" id="pca-log-clear">Clear</button>
+    </div>
+    <div class="log-body" id="pca-log-body">
+      <span class="log-idle">Run PCA to see real-time processing output…</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+const pcaRunBtn = document.getElementById('pca-run-btn');
+
+pcaRunBtn.addEventListener('click', () => {
+  const n = parseInt(document.getElementById('pca-n').value) || 10;
+  clearLog('pca-log-body');
+  hideElements(['pca-metrics-row', 'pca-chart-card', 'pca-table-card']);
+  pcaRunBtn.disabled = true;
+  pcaRunBtn.textContent = '⏳ Running…';
+
+  startSSEStream(`/run/pca?n=${n}`, 'pca-log-body', (results) => {
+    pcaRunBtn.disabled = false;
+    pcaRunBtn.innerHTML = '<span class="btn-icon">▶</span> Run PCA';
+
+    document.getElementById('pca-variance').textContent = results.total_variance + '%';
+    document.getElementById('pca-pc1').textContent = (results.explained_variance[0] || 0).toFixed(2) + '%';
+    document.getElementById('pca-pc2').textContent = (results.explained_variance[1] || 0).toFixed(2) + '%';
+    document.getElementById('pca-k').textContent = results.n_components;
+    showElements(['pca-metrics-row']);
+
+    const tbody = document.getElementById('pca-table-body');
+    tbody.innerHTML = '';
+    results.explained_variance.forEach((v, i) => {
+      tbody.innerHTML += `<tr><td>PC${i+1}</td><td>${v.toFixed(2)}%</td><td>${results.cumulative_variance[i].toFixed(2)}%</td></tr>`;
+    });
+    showElements(['pca-table-card']);
+
+    const chartWrap = document.getElementById('pca-chart-wrap');
+    showElements(['pca-chart-card']);
+    fetchChart('/api/chart/pca', chartWrap);
+  });
+});
+
+document.getElementById('pca-log-clear').addEventListener('click', () => clearLog('pca-log-body'));
+</script>
+{% endblock %}

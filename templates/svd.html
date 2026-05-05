@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}SVD Analysis{% endblock %}
+{% block page_title %}SVD Analysis{% endblock %}
+
+{% block content %}
+<div class="analysis-layout">
+
+  <!-- Controls -->
+  <div class="card controls-card">
+    <div class="card-header">
+      <h2 class="card-title">Singular Value Decomposition</h2>
+      <span class="badge badge-blue">Collaborative Filtering</span>
+    </div>
+    <p class="card-desc">SVD decomposes the user-item matrix into latent factor spaces, revealing hidden patterns and enabling accurate rating predictions.</p>
+    <div class="controls-row">
+      <div class="control-group">
+        <label class="control-label" for="svd-n">Components (k)</label>
+        <input type="number" id="svd-n" class="control-input" value="10" min="2" max="50" />
+      </div>
+      <button class="btn btn-primary" id="svd-run-btn">
+        <span class="btn-icon">▶</span> Run SVD
+      </button>
+    </div>
+  </div>
+
+  <!-- Metrics (shown after run) -->
+  <div class="metrics-row hidden" id="svd-metrics-row">
+    <div class="metric-chip" style="--accent:#6c63ff">
+      <div class="metric-val" id="svd-variance">—</div>
+      <div class="metric-lab">Variance Explained</div>
+    </div>
+    <div class="metric-chip" style="--accent:#2dd4bf">
+      <div class="metric-val" id="svd-rmse">—</div>
+      <div class="metric-lab">Reconstruction RMSE</div>
+    </div>
+    <div class="metric-chip" style="--accent:#f97316">
+      <div class="metric-val" id="svd-k">—</div>
+      <div class="metric-lab">Components</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card mt-4 hidden" id="svd-chart-card">
+    <div class="card-header">
+      <h2 class="card-title">Visualisation</h2>
+    </div>
+    <div id="svd-chart-wrap">
+      <div class="placeholder-inner">Loading chart…</div>
+    </div>
+  </div>
+
+  <!-- Variance table -->
+  <div class="card mt-4 hidden" id="svd-table-card">
+    <div class="card-header">
+      <h2 class="card-title">Component Details</h2>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="svd-table">
+        <thead><tr><th>#</th><th>Singular Value</th><th>Variance (%)</th><th>Cumulative (%)</th></tr></thead>
+        <tbody id="svd-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Live Log Panel -->
+  <div class="log-panel" id="svd-log">
+    <div class="log-header">
+      <span class="log-title">⚡ Live Process Log</span>
+      <button class="log-clear" id="svd-log-clear">Clear</button>
+    </div>
+    <div class="log-body" id="svd-log-body">
+      <span class="log-idle">Run SVD to see real-time processing output…</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+const svdRunBtn = document.getElementById('svd-run-btn');
+
+svdRunBtn.addEventListener('click', () => {
+  const n = parseInt(document.getElementById('svd-n').value) || 10;
+  clearLog('svd-log-body');
+  hideElements(['svd-metrics-row', 'svd-chart-card', 'svd-table-card']);
+  svdRunBtn.disabled = true;
+  svdRunBtn.textContent = '⏳ Running…';
+
+  startSSEStream(`/run/svd?n=${n}`, 'svd-log-body', (results) => {
+    svdRunBtn.disabled = false;
+    svdRunBtn.innerHTML = '<span class="btn-icon">▶</span> Run SVD';
+
+    // Metrics
+    document.getElementById('svd-variance').textContent = results.total_variance + '%';
+    document.getElementById('svd-rmse').textContent = results.rmse;
+    document.getElementById('svd-k').textContent = results.n_components;
+    showElements(['svd-metrics-row']);
+
+    // Table
+    const tbody = document.getElementById('svd-table-body');
+    tbody.innerHTML = '';
+    results.singular_values.forEach((sv, i) => {
+      tbody.innerHTML += `<tr>
+        <td>${i+1}</td>
+        <td>${sv.toFixed(2)}</td>
+        <td>${results.explained_variance[i].toFixed(2)}%</td>
+        <td>${results.cumulative_variance[i].toFixed(2)}%</td>
+      </tr>`;
+    });
+    showElements(['svd-table-card']);
+
+    // Chart
+    const chartWrap = document.getElementById('svd-chart-wrap');
+    showElements(['svd-chart-card']);
+    fetchChart('/api/chart/svd', chartWrap);
+  });
+});
+
+document.getElementById('svd-log-clear').addEventListener('click', () => clearLog('svd-log-body'));
+</script>
+{% endblock %}

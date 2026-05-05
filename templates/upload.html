@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Load Dataset{% endblock %}
+{% block page_title %}Load Dataset{% endblock %}
+
+{% block content %}
+
+<!-- ─── Download Guide ─────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">How to get MovieLens</h2>
+    <span class="badge badge-blue">Step 1</span>
+  </div>
+  <div class="guide-steps">
+    <div class="guide-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Download the dataset</div>
+        <div class="step-desc">
+          Go to <a href="https://grouplens.org/datasets/movielens/latest/" target="_blank" class="link">grouplens.org/datasets/movielens</a>
+          and download <strong>ml-latest-small.zip</strong> (100 k ratings, ~1 MB) or
+          <strong>ml-latest.zip</strong> (full dataset, ~300 MB).
+        </div>
+      </div>
+    </div>
+    <div class="guide-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Extract the ZIP</div>
+        <div class="step-desc">
+          Unzip it. You will find <code class="code-inline">ratings.csv</code> and <code class="code-inline">movies.csv</code>
+          inside the folder.
+        </div>
+      </div>
+    </div>
+    <div class="guide-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Upload below</div>
+        <div class="step-desc">
+          Drag &amp; drop (or browse) the two files into the upload zones below, then click
+          <strong>Load into MineMatrix</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Current Dataset ───────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Current Dataset</h2>
+    <span class="badge badge-blue" id="current-source-badge">{{ current_source }}</span>
+  </div>
+  <div class="current-info-grid" id="current-info">
+    {% if current_stats %}
+    <div class="ci-chip"><div class="ci-val">{{ current_stats.n_users }}</div><div class="ci-lab">Users</div></div>
+    <div class="ci-chip"><div class="ci-val">{{ "{:,}".format(current_stats.n_items) }}</div><div class="ci-lab">Items</div></div>
+    <div class="ci-chip"><div class="ci-val">{{ "{:,}".format(current_stats.total_ratings) }}</div><div class="ci-lab">Ratings</div></div>
+    <div class="ci-chip"><div class="ci-val">{{ current_stats.sparsity }}%</div><div class="ci-lab">Sparsity</div></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ─── Upload Form ────────────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Upload MovieLens CSV Files</h2>
+    <span class="badge badge-orange">Step 2</span>
+  </div>
+
+  <form id="upload-form" enctype="multipart/form-data">
+    <div class="upload-grid">
+
+      <!-- Ratings CSV (required) -->
+      <div class="drop-zone" id="dz-ratings" data-field="ratings_file">
+        <div class="dz-icon">📄</div>
+        <div class="dz-title">ratings.csv <span class="req">*required</span></div>
+        <div class="dz-sub">Columns: userId, movieId, rating, timestamp</div>
+        <div class="dz-filename hidden" id="ratings-name"></div>
+        <input type="file" id="ratings-input" name="ratings_file" accept=".csv" class="dz-input" />
+        <button type="button" class="btn btn-secondary btn-sm dz-browse">Browse…</button>
+      </div>
+
+      <!-- Movies CSV (optional) -->
+      <div class="drop-zone" id="dz-movies" data-field="movies_file">
+        <div class="dz-icon">🎬</div>
+        <div class="dz-title">movies.csv <span class="opt">optional</span></div>
+        <div class="dz-sub">Columns: movieId, title, genres</div>
+        <div class="dz-filename hidden" id="movies-name"></div>
+        <input type="file" id="movies-input" name="movies_file" accept=".csv" class="dz-input" />
+        <button type="button" class="btn btn-secondary btn-sm dz-browse">Browse…</button>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="upload-options">
+      <div class="control-group">
+        <label class="control-label" for="max-users">Max users to load (0 = all)</label>
+        <input type="number" id="max-users" name="max_users" class="control-input" value="0" min="0" max="100000" style="width:140px" />
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="min-ratings">Min ratings per user</label>
+        <input type="number" id="min-ratings" name="min_ratings" class="control-input" value="5" min="1" max="100" style="width:140px" />
+      </div>
+    </div>
+
+    <div class="upload-actions">
+      <button type="submit" class="btn btn-primary" id="upload-btn" disabled>
+        <span class="btn-icon">⬆</span> Load into MineMatrix
+      </button>
+      <span class="upload-note">Results will replace the current dataset in memory.</span>
+    </div>
+  </form>
+
+  <!-- Progress log -->
+  <div class="log-panel" id="upload-log" style="margin:0; border-radius:0 0 10px 10px; border-top: 1px solid var(--border);">
+    <div class="log-header">
+      <span class="log-title">Upload Log</span>
+      <button class="log-clear" id="upload-log-clear">Clear</button>
+    </div>
+    <div class="log-body" id="upload-log-body">
+      <span class="log-idle">Upload files to see progress…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Manual method ─────────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Alternative: Manual File Placement</h2>
+    <span class="badge">Advanced</span>
+  </div>
+  <div class="manual-steps" style="padding:16px 20px;">
+    <p style="color:var(--text-muted);font-size:.875rem;line-height:1.7;margin-bottom:14px;">
+      Instead of uploading, you can place the files directly in the project folder and restart the app:
+    </p>
+    <div class="code-block">
+      <pre>MineMatrix/
+  kaggle_data/          ← create this folder
+    ratings.csv         ← put ratings.csv here
+    movies.csv          ← put movies.csv here (optional)</pre>
+    </div>
+    <p style="color:var(--text-muted);font-size:.875rem;margin-top:12px;">
+      Then restart <code class="code-inline">python app.py</code> — it will auto-detect the files on startup.
+    </p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+// ─── Drop Zone Setup ────────────────────────────────────────────────
+function setupDropZone(dzId, inputId, nameId) {
+  const dz = document.getElementById(dzId);
+  const inp = document.getElementById(inputId);
+  const nameEl = document.getElementById(nameId);
+  const browseBtn = dz.querySelector('.dz-browse');
+
+  browseBtn.addEventListener('click', () => inp.click());
+  inp.addEventListener('change', () => {
+    if (inp.files[0]) setFile(inp.files[0]);
+  });
+
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+      // Create a DataTransfer to assign to input
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      inp.files = dt.files;
+      setFile(file);
+    } else {
+      showToast('Please drop a .csv file', 'error');
+    }
+  });
+
+  function setFile(file) {
+    nameEl.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    nameEl.classList.remove('hidden');
+    dz.classList.add('has-file');
+    checkReady();
+  }
+}
+
+setupDropZone('dz-ratings', 'ratings-input', 'ratings-name');
+setupDropZone('dz-movies', 'movies-input', 'movies-name');
+
+function checkReady() {
+  const ratingsReady = document.getElementById('ratings-input').files.length > 0;
+  document.getElementById('upload-btn').disabled = !ratingsReady;
+}
+
+// ─── Upload Form Submit ──────────────────────────────────────────────
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+
+  clearLog('upload-log-body');
+  appendLog('upload-log-body', 'Preparing upload...', 'info');
+
+  const formData = new FormData(e.target);
+  // Remove movies_file if empty
+  if (!document.getElementById('movies-input').files.length) {
+    formData.delete('movies_file');
+  }
+
+  try {
+    // Use SSE stream for upload progress
+    appendLog('upload-log-body', 'Sending files to server...', 'info');
+    const resp = await fetch('/upload', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (data.ok) {
+      appendLog('upload-log-body', '[OK] Dataset loaded successfully!', 'success');
+      appendLog('upload-log-body', '  Source: ' + data.data_source, 'success');
+      appendLog('upload-log-body', '  Users: ' + data.n_users, 'success');
+      appendLog('upload-log-body', '  Items: ' + data.n_items, 'success');
+      appendLog('upload-log-body', '  Ratings: ' + data.n_ratings, 'success');
+      appendLog('upload-log-body', '  Sparsity: ' + data.sparsity + '%', 'success');
+
+      // Update current dataset display
+      document.getElementById('current-source-badge').textContent = data.data_source;
+
+      showToast('MovieLens loaded! Redirecting to dashboard...', 'success');
+      setTimeout(() => window.location.href = '/', 2000);
+    } else {
+      appendLog('upload-log-body', '[ERROR] ' + (data.error || 'Unknown error'), 'error');
+      showToast(data.error || 'Upload failed', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-icon">\u2b06</span> Load into MineMatrix';
+    }
+  } catch (err) {
+    appendLog('upload-log-body', '[ERROR] ' + err.message, 'error');
+    showToast('Upload failed: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<span class="btn-icon">\u2b06</span> Load into MineMatrix';
+  }
+});
+
+document.getElementById('upload-log-clear').addEventListener('click', () => clearLog('upload-log-body'));
+</script>
+{% endblock %}

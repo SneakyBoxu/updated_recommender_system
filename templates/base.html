@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MineMatrix — Matrix Mining in Academic Ecosystems. SVD, NMF and PCA-powered item recommendation system." />
+  <title>{% block title %}MineMatrix{% endblock %} — Matrix Mining</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ─── Sidebar ─────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      <div class="logo-text">
+        <span class="logo-name">MineMatrix</span>
+        <span class="logo-sub">Academic Ecosystems</span>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Analysis</div>
+    <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}" id="nav-overview">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Data Overview</span>
+    </a>
+    <a href="/upload" class="nav-item {% if request.path == '/upload' %}active{% endif %}" id="nav-upload">
+      <span class="nav-icon">📂</span>
+      <span class="nav-label">Load Dataset</span>
+    </a>
+    <a href="/svd" class="nav-item {% if request.path == '/svd' %}active{% endif %}" id="nav-svd">
+      <span class="nav-icon">🔵</span>
+      <span class="nav-label">SVD Analysis</span>
+    </a>
+    <a href="/nmf" class="nav-item {% if request.path == '/nmf' %}active{% endif %}" id="nav-nmf">
+      <span class="nav-icon">🟣</span>
+      <span class="nav-label">NMF Analysis</span>
+    </a>
+    <a href="/pca" class="nav-item {% if request.path == '/pca' %}active{% endif %}" id="nav-pca">
+      <span class="nav-icon">🟠</span>
+      <span class="nav-label">PCA Visualization</span>
+    </a>
+    <div class="nav-section-label">Outputs</div>
+    <a href="/recommend" class="nav-item {% if request.path == '/recommend' %}active{% endif %}" id="nav-recommend">
+      <span class="nav-icon">⭐</span>
+      <span class="nav-label">Recommendations</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="data-badge" id="data-badge-sidebar">
+      <span class="badge-dot"></span>
+      <span id="sidebar-source-label">Loading…</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── Main Content ─────────────────────────────────────────────── -->
+<div class="layout">
+  <header class="topbar">
+    <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">☰</button>
+    <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+    <div class="topbar-right">
+      <div class="data-badge pill" id="data-badge-header">
+        <span class="badge-dot"></span>
+        <span id="header-source-label">{{ data_source if data_source is defined else '…' }}</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="reload-btn" title="Reload / Regenerate Data">↺</button>
+    </div>
+  </header>
+
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<!-- ─── Toast ────────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ─── Reload Modal ─────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="reload-modal">
+  <div class="modal-card">
+    <h3 class="modal-title">Reload Data</h3>
+    <p class="modal-body">Choose how to load data into MineMatrix.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="reload-auto">Auto-Detect</button>
+      <button class="btn btn-danger" id="reload-regen">Regenerate Synthetic</button>
+      <button class="btn btn-ghost" id="reload-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+  // Set sidebar source label from server-rendered value
+  const src = document.getElementById('header-source-label').textContent.trim();
+  document.getElementById('sidebar-source-label').textContent = src || '—';
+</script>
+{% block page_scripts %}{% endblock %}
+</body>
+</html>

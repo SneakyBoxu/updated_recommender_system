@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Data Overview{% endblock %}
+{% block page_title %}Data Overview{% endblock %}
+
+{% block content %}
+<!-- ─── KPI Cards ─────────────────────────────────────────────────── -->
+<div class="kpi-grid">
+  <div class="kpi-card" style="--accent:#6c63ff">
+    <div class="kpi-icon">👥</div>
+    <div class="kpi-value">{{ stats.n_users }}</div>
+    <div class="kpi-label">Users</div>
+  </div>
+  <div class="kpi-card" style="--accent:#2dd4bf">
+    <div class="kpi-icon">📦</div>
+    <div class="kpi-value">{{ "{:,}".format(stats.n_items) }}</div>
+    <div class="kpi-label">Items</div>
+  </div>
+  <div class="kpi-card" style="--accent:#f97316">
+    <div class="kpi-icon">⭐</div>
+    <div class="kpi-value">{{ "{:,}".format(stats.total_ratings) }}</div>
+    <div class="kpi-label">Ratings</div>
+  </div>
+  <div class="kpi-card" style="--accent:#ec4899">
+    <div class="kpi-icon">🔍</div>
+    <div class="kpi-value">{{ stats.sparsity }}%</div>
+    <div class="kpi-label">Sparsity</div>
+  </div>
+  <div class="kpi-card" style="--accent:#facc15">
+    <div class="kpi-icon">⚖️</div>
+    <div class="kpi-value">{{ stats.avg_rating }}</div>
+    <div class="kpi-label">Avg Rating</div>
+  </div>
+</div>
+
+<!-- ─── Stats Chart ───────────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Dataset Statistics</h2>
+    <button class="btn btn-primary btn-sm" id="load-stats-chart">Generate Charts</button>
+  </div>
+  <div class="chart-placeholder" id="stats-chart-wrap">
+    <div class="placeholder-inner">Click <strong>Generate Charts</strong> to visualize dataset statistics</div>
+  </div>
+</div>
+
+<!-- ─── User Table ────────────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">User List</h2>
+    <span class="badge">{{ users|length }} users</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table" id="users-table">
+      <thead>
+        <tr>
+          {% for col in users[0].keys() %}
+          <th>{{ col | replace('_', ' ') | title }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          {% for v in u.values() %}
+          <td>{{ v }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── Items Sample ─────────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Item Sample (first 20)</h2>
+    <span class="badge">{{ stats.n_items | default(0) }} total</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table" id="items-table">
+      <thead>
+        <tr>
+          {% for col in item_cols %}
+          <th>{{ col | replace('_', ' ') | title }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items_sample %}
+        <tr>
+          {% for col in item_cols %}
+          <td>{{ item[col] }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.getElementById('load-stats-chart').addEventListener('click', async () => {
+  const wrap = document.getElementById('stats-chart-wrap');
+  wrap.innerHTML = '<div class="placeholder-inner spinner-text">⏳ Generating charts…</div>';
+  try {
+    const res = await fetch('/api/chart/stats');
+    const data = await res.json();
+    if (data.image) {
+      wrap.innerHTML = `<img src="${data.image}" class="chart-img" alt="Dataset statistics" />`;
+    } else {
+      wrap.innerHTML = `<div class="placeholder-inner error-text">${data.error}</div>`;
+    }
+  } catch (e) {
+    wrap.innerHTML = `<div class="placeholder-inner error-text">Failed to load chart</div>`;
+  }
+});
+</script>
+{% endblock %}

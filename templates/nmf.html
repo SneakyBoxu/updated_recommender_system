@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}NMF Analysis{% endblock %}
+{% block page_title %}NMF Analysis{% endblock %}
+
+{% block content %}
+<div class="analysis-layout">
+
+  <!-- Controls -->
+  <div class="card controls-card">
+    <div class="card-header">
+      <h2 class="card-title">Non-Negative Matrix Factorization</h2>
+      <span class="badge badge-purple">Latent Factor Model</span>
+    </div>
+    <p class="card-desc">NMF factorizes the rating matrix into non-negative user and item latent factors, producing interpretable parts-based representations.</p>
+    <div class="controls-row">
+      <div class="control-group">
+        <label class="control-label" for="nmf-n">Components (k)</label>
+        <input type="number" id="nmf-n" class="control-input" value="10" min="2" max="50" />
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="nmf-iter">Max Iterations</label>
+        <input type="number" id="nmf-iter" class="control-input" value="200" min="50" max="1000" />
+      </div>
+      <button class="btn btn-primary btn-purple" id="nmf-run-btn">
+        <span class="btn-icon">▶</span> Run NMF
+      </button>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-row hidden" id="nmf-metrics-row">
+    <div class="metric-chip" style="--accent:#a855f7">
+      <div class="metric-val" id="nmf-error">—</div>
+      <div class="metric-lab">Reconstruction Error</div>
+    </div>
+    <div class="metric-chip" style="--accent:#2dd4bf">
+      <div class="metric-val" id="nmf-rmse">—</div>
+      <div class="metric-lab">RMSE</div>
+    </div>
+    <div class="metric-chip" style="--accent:#f97316">
+      <div class="metric-val" id="nmf-iter-done">—</div>
+      <div class="metric-lab">Iterations</div>
+    </div>
+    <div class="metric-chip" style="--accent:#6c63ff">
+      <div class="metric-val" id="nmf-k">—</div>
+      <div class="metric-lab">Components</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card mt-4 hidden" id="nmf-chart-card">
+    <div class="card-header">
+      <h2 class="card-title">Latent Factor Visualisation</h2>
+    </div>
+    <div id="nmf-chart-wrap">
+      <div class="placeholder-inner">Loading chart…</div>
+    </div>
+  </div>
+
+  <!-- Live Log Panel -->
+  <div class="log-panel" id="nmf-log">
+    <div class="log-header">
+      <span class="log-title">⚡ Live Process Log</span>
+      <button class="log-clear" id="nmf-log-clear">Clear</button>
+    </div>
+    <div class="log-body" id="nmf-log-body">
+      <span class="log-idle">Run NMF to see real-time processing output…</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+const nmfRunBtn = document.getElementById('nmf-run-btn');
+
+nmfRunBtn.addEventListener('click', () => {
+  const n = parseInt(document.getElementById('nmf-n').value) || 10;
+  const iter = parseInt(document.getElementById('nmf-iter').value) || 200;
+  clearLog('nmf-log-body');
+  hideElements(['nmf-metrics-row', 'nmf-chart-card']);
+  nmfRunBtn.disabled = true;
+  nmfRunBtn.textContent = '⏳ Running…';
+
+  startSSEStream(`/run/nmf?n=${n}&iter=${iter}`, 'nmf-log-body', (results) => {
+    nmfRunBtn.disabled = false;
+    nmfRunBtn.innerHTML = '<span class="btn-icon">▶</span> Run NMF';
+
+    document.getElementById('nmf-error').textContent = results.reconstruction_error;
+    document.getElementById('nmf-rmse').textContent = results.rmse;
+    document.getElementById('nmf-iter-done').textContent = results.n_iter;
+    document.getElementById('nmf-k').textContent = results.n_components;
+    showElements(['nmf-metrics-row']);
+
+    const chartWrap = document.getElementById('nmf-chart-wrap');
+    showElements(['nmf-chart-card']);
+    fetchChart('/api/chart/nmf', chartWrap);
+  });
+});
+
+document.getElementById('nmf-log-clear').addEventListener('click', () => clearLog('nmf-log-body'));
+</script>
+{% endblock %}
