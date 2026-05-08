@@ -515,6 +515,18 @@ body {
 .dz-filename { font-size: 0.75rem; color: var(--teal); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
 .dz-input { display: none; }
 
+/* ─── Column Mapping ──────────────────────────────────────────────── */
+.column-mapping {
+  padding: 18px 20px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.column-mapping.hidden { display: none; }
+.mapping-grid {
+  display: flex; gap: 18px; flex-wrap: wrap;
+}
+
 .upload-options {
   display: flex; gap: 18px; flex-wrap: wrap;
   padding: 18px 20px 0;

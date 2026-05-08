@@ -74,6 +74,34 @@
 <script>
 const nmfRunBtn = document.getElementById('nmf-run-btn');
 
+// Check if results already exist on page load
+const existingResults = {{ nmf_results | tojson | safe }} || null;
+
+if (existingResults) {
+  // Display existing results
+  displayNMFResults(existingResults, true);
+  appendLog('nmf-log-body', '[INFO] Loaded cached NMF results', 'info');
+}
+
+function displayNMFResults(results, isFromCache = false) {
+  // Both formats are the same for NMF, but keep consistent pattern
+  document.getElementById('nmf-error').textContent = 
+    (typeof results.reconstruction_error === 'number') 
+      ? results.reconstruction_error.toFixed(4) 
+      : results.reconstruction_error;
+  document.getElementById('nmf-rmse').textContent = 
+    (typeof results.rmse === 'number') 
+      ? results.rmse.toFixed(4) 
+      : results.rmse;
+  document.getElementById('nmf-iter-done').textContent = results.n_iter;
+  document.getElementById('nmf-k').textContent = results.n_components;
+  showElements(['nmf-metrics-row']);
+
+  const chartWrap = document.getElementById('nmf-chart-wrap');
+  showElements(['nmf-chart-card']);
+  fetchChart('/api/chart/nmf', chartWrap);
+}
+
 nmfRunBtn.addEventListener('click', () => {
   const n = parseInt(document.getElementById('nmf-n').value) || 10;
   const iter = parseInt(document.getElementById('nmf-iter').value) || 200;
@@ -85,16 +113,7 @@ nmfRunBtn.addEventListener('click', () => {
   startSSEStream(`/run/nmf?n=${n}&iter=${iter}`, 'nmf-log-body', (results) => {
     nmfRunBtn.disabled = false;
     nmfRunBtn.innerHTML = '<span class="btn-icon">▶</span> Run NMF';
-
-    document.getElementById('nmf-error').textContent = results.reconstruction_error;
-    document.getElementById('nmf-rmse').textContent = results.rmse;
-    document.getElementById('nmf-iter-done').textContent = results.n_iter;
-    document.getElementById('nmf-k').textContent = results.n_components;
-    showElements(['nmf-metrics-row']);
-
-    const chartWrap = document.getElementById('nmf-chart-wrap');
-    showElements(['nmf-chart-card']);
-    fetchChart('/api/chart/nmf', chartWrap);
+    displayNMFResults(results, false);
   });
 });
 

@@ -79,6 +79,62 @@
 <script>
 const svdRunBtn = document.getElementById('svd-run-btn');
 
+// Check if results already exist on page load
+const existingResults = {{ svd_results | tojson | safe }} || null;
+
+if (existingResults) {
+  // Display existing results
+  displaySVDResults(existingResults, true);
+  appendLog('svd-log-body', '[INFO] Loaded cached SVD results', 'info');
+}
+
+function displaySVDResults(results, isFromCache = false) {
+  // Metrics - handle both SSE format and cached format
+  if (isFromCache) {
+    // Cached results have raw values
+    document.getElementById('svd-variance').textContent = (results.total_variance_explained * 100).toFixed(2) + '%';
+    document.getElementById('svd-rmse').textContent = results.rmse.toFixed(4);
+  } else {
+    // SSE results already have formatted values
+    document.getElementById('svd-variance').textContent = results.total_variance + '%';
+    document.getElementById('svd-rmse').textContent = results.rmse;
+  }
+  document.getElementById('svd-k').textContent = results.n_components;
+  showElements(['svd-metrics-row']);
+
+  // Table
+  const tbody = document.getElementById('svd-table-body');
+  tbody.innerHTML = '';
+  
+  if (isFromCache) {
+    // Cached results use explained_variance_ratio (decimals)
+    results.singular_values.forEach((sv, i) => {
+      tbody.innerHTML += `<tr>
+        <td>${i+1}</td>
+        <td>${sv.toFixed(2)}</td>
+        <td>${(results.explained_variance_ratio[i] * 100).toFixed(2)}%</td>
+        <td>${(results.cumulative_variance[i] * 100).toFixed(2)}%</td>
+      </tr>`;
+    });
+  } else {
+    // SSE results use explained_variance (already percentages)
+    results.singular_values.forEach((sv, i) => {
+      tbody.innerHTML += `<tr>
+        <td>${i+1}</td>
+        <td>${sv.toFixed(2)}</td>
+        <td>${results.explained_variance[i].toFixed(2)}%</td>
+        <td>${results.cumulative_variance[i].toFixed(2)}%</td>
+      </tr>`;
+    });
+  }
+  showElements(['svd-table-card']);
+
+  // Chart
+  const chartWrap = document.getElementById('svd-chart-wrap');
+  showElements(['svd-chart-card']);
+  fetchChart('/api/chart/svd', chartWrap);
+}
+
 svdRunBtn.addEventListener('click', () => {
   const n = parseInt(document.getElementById('svd-n').value) || 10;
   clearLog('svd-log-body');
@@ -89,30 +145,7 @@ svdRunBtn.addEventListener('click', () => {
   startSSEStream(`/run/svd?n=${n}`, 'svd-log-body', (results) => {
     svdRunBtn.disabled = false;
     svdRunBtn.innerHTML = '<span class="btn-icon">▶</span> Run SVD';
-
-    // Metrics
-    document.getElementById('svd-variance').textContent = results.total_variance + '%';
-    document.getElementById('svd-rmse').textContent = results.rmse;
-    document.getElementById('svd-k').textContent = results.n_components;
-    showElements(['svd-metrics-row']);
-
-    // Table
-    const tbody = document.getElementById('svd-table-body');
-    tbody.innerHTML = '';
-    results.singular_values.forEach((sv, i) => {
-      tbody.innerHTML += `<tr>
-        <td>${i+1}</td>
-        <td>${sv.toFixed(2)}</td>
-        <td>${results.explained_variance[i].toFixed(2)}%</td>
-        <td>${results.cumulative_variance[i].toFixed(2)}%</td>
-      </tr>`;
-    });
-    showElements(['svd-table-card']);
-
-    // Chart
-    const chartWrap = document.getElementById('svd-chart-wrap');
-    showElements(['svd-chart-card']);
-    fetchChart('/api/chart/svd', chartWrap);
+    displaySVDResults(results, false);
   });
 });
 

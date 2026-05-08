@@ -7,41 +7,52 @@
 <!-- ─── Download Guide ─────────────────────────────────────────────── -->
 <div class="card">
   <div class="card-header">
-    <h2 class="card-title">How to get MovieLens</h2>
+    <h2 class="card-title">How to Load Your Data</h2>
     <span class="badge badge-blue">Step 1</span>
   </div>
   <div class="guide-steps">
     <div class="guide-step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <div class="step-title">Download the dataset</div>
+        <div class="step-title">Prepare your CSV file</div>
         <div class="step-desc">
-          Go to <a href="https://grouplens.org/datasets/movielens/latest/" target="_blank" class="link">grouplens.org/datasets/movielens</a>
-          and download <strong>ml-latest-small.zip</strong> (100 k ratings, ~1 MB) or
-          <strong>ml-latest.zip</strong> (full dataset, ~300 MB).
+          Your ratings CSV must contain at least 3 columns: <strong>user ID</strong>, <strong>item ID</strong>, and <strong>rating</strong>.
+          Column names can be anything (e.g., userId/movieId/rating, student/course/score, etc.)
         </div>
       </div>
     </div>
     <div class="guide-step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <div class="step-title">Extract the ZIP</div>
+        <div class="step-title">Optional: Item metadata</div>
         <div class="step-desc">
-          Unzip it. You will find <code class="code-inline">ratings.csv</code> and <code class="code-inline">movies.csv</code>
-          inside the folder.
+          You can also upload an <strong>items CSV</strong> with additional information (e.g., titles, genres, descriptions).
+          This file should have an item ID column matching your ratings file.
         </div>
       </div>
     </div>
     <div class="guide-step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <div class="step-title">Upload below</div>
+        <div class="step-title">Upload and map columns</div>
         <div class="step-desc">
-          Drag &amp; drop (or browse) the two files into the upload zones below, then click
-          <strong>Load into MineMatrix</strong>.
+          Upload your file(s) below. The system will auto-detect columns, but you can manually select the correct ones if needed.
         </div>
       </div>
     </div>
+  </div>
+  <div style="padding:0 20px 16px;">
+    <details style="color:var(--text-muted);font-size:.875rem;">
+      <summary style="cursor:pointer;font-weight:600;color:var(--text-primary);margin-bottom:8px;">Example: MovieLens Dataset</summary>
+      <p style="margin:8px 0;">
+        Want to try with real data? Download the MovieLens dataset from 
+        <a href="https://grouplens.org/datasets/movielens/latest/" target="_blank" class="link">grouplens.org/datasets/movielens</a>.
+        Get <strong>ml-latest-small.zip</strong> (100k ratings, ~1 MB) or <strong>ml-latest.zip</strong> (full dataset).
+      </p>
+      <p style="margin:8px 0;">
+        Extract the ZIP and upload <code class="code-inline">ratings.csv</code> and optionally <code class="code-inline">movies.csv</code>.
+      </p>
+    </details>
   </div>
 </div>
 
@@ -64,7 +75,7 @@
 <!-- ─── Upload Form ────────────────────────────────────────────────── -->
 <div class="card mt-4">
   <div class="card-header">
-    <h2 class="card-title">Upload MovieLens CSV Files</h2>
+    <h2 class="card-title">Upload CSV Files</h2>
     <span class="badge badge-orange">Step 2</span>
   </div>
 
@@ -75,7 +86,7 @@
       <div class="drop-zone" id="dz-ratings" data-field="ratings_file">
         <div class="dz-icon">📄</div>
         <div class="dz-title">ratings.csv <span class="req">*required</span></div>
-        <div class="dz-sub">Columns: userId, movieId, rating, timestamp</div>
+        <div class="dz-sub">Must contain: user, item, rating columns</div>
         <div class="dz-filename hidden" id="ratings-name"></div>
         <input type="file" id="ratings-input" name="ratings_file" accept=".csv" class="dz-input" />
         <button type="button" class="btn btn-secondary btn-sm dz-browse">Browse…</button>
@@ -84,11 +95,36 @@
       <!-- Movies CSV (optional) -->
       <div class="drop-zone" id="dz-movies" data-field="movies_file">
         <div class="dz-icon">🎬</div>
-        <div class="dz-title">movies.csv <span class="opt">optional</span></div>
-        <div class="dz-sub">Columns: movieId, title, genres</div>
+        <div class="dz-title">items.csv <span class="opt">optional</span></div>
+        <div class="dz-sub">Item metadata (e.g., title, genres)</div>
         <div class="dz-filename hidden" id="movies-name"></div>
         <input type="file" id="movies-input" name="movies_file" accept=".csv" class="dz-input" />
         <button type="button" class="btn btn-secondary btn-sm dz-browse">Browse…</button>
+      </div>
+    </div>
+
+    <!-- Column Mapping (shown after file upload) -->
+    <div id="column-mapping" class="column-mapping hidden">
+      <h3 style="color:var(--text-primary);font-size:1rem;margin-bottom:12px;">Column Mapping</h3>
+      <div class="mapping-grid">
+        <div class="control-group">
+          <label class="control-label" for="user-col">User Column</label>
+          <select id="user-col" name="user_col" class="control-input" style="width:180px">
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label" for="item-col">Item Column</label>
+          <select id="item-col" name="item_col" class="control-input" style="width:180px">
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label" for="rating-col">Rating Column</label>
+          <select id="rating-col" name="rating_col" class="control-input" style="width:180px">
+            <option value="">-- Select --</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -190,10 +226,88 @@ function setupDropZone(dzId, inputId, nameId) {
 setupDropZone('dz-ratings', 'ratings-input', 'ratings-name');
 setupDropZone('dz-movies', 'movies-input', 'movies-name');
 
+// ─── Parse CSV Headers ───────────────────────────────────────────────
+async function parseCSVHeaders(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const firstLine = text.split('\n')[0];
+      const headers = firstLine.split(',').map(h => h.trim().replace(/['"]/g, ''));
+      resolve(headers);
+    };
+    reader.onerror = reject;
+    reader.readAsText(file.slice(0, 1024)); // Read first 1KB
+  });
+}
+
+// ─── Auto-detect column names ────────────────────────────────────────
+function autoDetectColumn(headers, patterns) {
+  for (const pattern of patterns) {
+    const match = headers.find(h => h.toLowerCase().includes(pattern.toLowerCase()));
+    if (match) return match;
+  }
+  return headers[0]; // fallback to first column
+}
+
+// ─── Update column mapping UI ────────────────────────────────────────
+async function updateColumnMapping() {
+  const ratingsFile = document.getElementById('ratings-input').files[0];
+  if (!ratingsFile) {
+    document.getElementById('column-mapping').classList.add('hidden');
+    return;
+  }
+
+  try {
+    const headers = await parseCSVHeaders(ratingsFile);
+    
+    // Populate dropdowns
+    const userCol = document.getElementById('user-col');
+    const itemCol = document.getElementById('item-col');
+    const ratingCol = document.getElementById('rating-col');
+    
+    [userCol, itemCol, ratingCol].forEach(select => {
+      select.innerHTML = '<option value="">-- Select --</option>';
+      headers.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h;
+        opt.textContent = h;
+        select.appendChild(opt);
+      });
+    });
+
+    // Auto-detect and pre-select
+    userCol.value = autoDetectColumn(headers, ['userId', 'user_id', 'user', 'studentId', 'student']);
+    itemCol.value = autoDetectColumn(headers, ['movieId', 'item_id', 'itemId', 'item', 'courseId', 'course', 'productId']);
+    ratingCol.value = autoDetectColumn(headers, ['rating', 'score', 'rate', 'value']);
+
+    document.getElementById('column-mapping').classList.remove('hidden');
+    checkReady();
+  } catch (err) {
+    console.error('Failed to parse CSV headers:', err);
+    showToast('Failed to read CSV headers', 'error');
+  }
+}
+
+// Update mapping when ratings file changes
+document.getElementById('ratings-input').addEventListener('change', updateColumnMapping);
+
 function checkReady() {
   const ratingsReady = document.getElementById('ratings-input').files.length > 0;
-  document.getElementById('upload-btn').disabled = !ratingsReady;
+  const userColSelected = document.getElementById('user-col').value !== '';
+  const itemColSelected = document.getElementById('item-col').value !== '';
+  const ratingColSelected = document.getElementById('rating-col').value !== '';
+  
+  const mappingVisible = !document.getElementById('column-mapping').classList.contains('hidden');
+  const allReady = ratingsReady && (!mappingVisible || (userColSelected && itemColSelected && ratingColSelected));
+  
+  document.getElementById('upload-btn').disabled = !allReady;
 }
+
+// Add change listeners to column selects
+['user-col', 'item-col', 'rating-col'].forEach(id => {
+  document.getElementById(id).addEventListener('change', checkReady);
+});
 
 // ─── Upload Form Submit ──────────────────────────────────────────────
 document.getElementById('upload-form').addEventListener('submit', async (e) => {

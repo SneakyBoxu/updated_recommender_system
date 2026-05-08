@@ -1,28 +1,61 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-*.egg-info/
-dist/
-build/
-
-# Virtual environments
-venv/
 env/
-.venv/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Generated data
-data/ratings_matrix.npy
+# Flask
+instance/
+.webassets-cache
 
-# Environment variables
-.env
-.env.local
+# Documentation (keep only essential README)
+CACHE_FIX.md
+CHANGES.md
+COLUMN_FILTERING.md
+CUSTOM_CSV_GUIDE.md
+DATA_DICTIONARY.md
+FEATURE_SUMMARY.md
+MATCH_PERCENTAGE_FEATURE.md
+QUICK_START.md
+README_CUSTOM_CSV.md
+UI_CHANGES.md
+UNIVERSAL_CHANGES.md
+
+# Test files
+test_custom.csv
+
+# Tkinter GUI (not needed for Flask app)
+main.py
+
+# Data files (will be generated)
+data/
+kaggle_data/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store

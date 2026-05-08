@@ -1,6 +1,6 @@
 """
 MineMatrix Flask Web Application
-Matrix Mining in Academic Ecosystems — Web Interface with Real-Time Processing
+Matrix Mining Recommender System — Web Interface with Real-Time Processing
 """
 
 import os
@@ -229,6 +229,11 @@ def handle_upload():
 
     max_users   = int(request.form.get('max_users', 0))
     min_ratings = int(request.form.get('min_ratings', 5))
+    
+    # Get custom column names from form
+    user_col   = request.form.get('user_col', '').strip()
+    item_col   = request.form.get('item_col', '').strip()
+    rating_col = request.form.get('rating_col', '').strip()
 
     # Save uploads to a temp folder inside the project
     upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kaggle_data')
@@ -250,18 +255,31 @@ def handle_upload():
                 ratings_file=ratings_path,
                 movies_file=movies_path
             )
-            data_source = 'MovieLens (with metadata)'
+            data_source = 'Custom Dataset (with metadata)'
         else:
-            # Auto-detect column names
+            # Use provided column names or auto-detect
             sample = pd.read_csv(ratings_path, nrows=1)
             cols = sample.columns.tolist()
-            user_col   = next((c for c in ['userId', 'user_id', 'user'] if c in cols), cols[0])
-            item_col   = next((c for c in ['movieId', 'item_id', 'itemId', 'movie'] if c in cols), cols[1])
-            rating_col = next((c for c in ['rating', 'score', 'rate'] if c in cols), cols[2])
+            
+            if not user_col:
+                user_col = next((c for c in ['userId', 'user_id', 'user', 'studentId', 'student'] if c in cols), cols[0])
+            if not item_col:
+                item_col = next((c for c in ['movieId', 'item_id', 'itemId', 'item', 'courseId', 'course', 'movie', 'productId'] if c in cols), cols[1])
+            if not rating_col:
+                rating_col = next((c for c in ['rating', 'score', 'rate', 'value'] if c in cols), cols[2])
+            
+            # Validate columns exist
+            if user_col not in cols:
+                return jsonify({'ok': False, 'error': f'Column "{user_col}" not found in CSV'}), 400
+            if item_col not in cols:
+                return jsonify({'ok': False, 'error': f'Column "{item_col}" not found in CSV'}), 400
+            if rating_col not in cols:
+                return jsonify({'ok': False, 'error': f'Column "{rating_col}" not found in CSV'}), 400
+            
             item_df, user_df, ratings_matrix = loader.load_from_ratings_file(
                 ratings_path, user_col=user_col, item_col=item_col, rating_col=rating_col
             )
-            data_source = 'MovieLens (ratings only)'
+            data_source = 'Custom Dataset'
 
         # Optional: filter users with too few ratings
         if min_ratings > 1 and hasattr(loader, 'filter_data'):

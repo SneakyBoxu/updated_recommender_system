@@ -1,6 +1,6 @@
 ﻿"""
-Dataset Generator for Academic Item Recommendation System
-Generates synthetic user-item rating data meeting project requirements
+Dataset Generator for Recommender System
+Generates synthetic user-item rating data
 """
 
 import numpy as np
@@ -14,9 +14,9 @@ class AcademicDataGenerator:
         Initialize data generator
         
         Args:
-            n_users: Number of students (minimum 15)
-            n_items: Number of courses (minimum 10000)
-            sparsity: Proportion of missing ratings (realistic for item data)
+            n_users: Number of users (minimum 15)
+            n_items: Number of items (minimum 10000)
+            sparsity: Proportion of missing ratings (realistic for recommendation data)
         """
         self.n_users = max(n_users, 15)
         self.n_items = max(n_items, 10000)
@@ -24,44 +24,44 @@ class AcademicDataGenerator:
         
     def generate_course_features(self):
         """Generate item metadata"""
-        departments = ['CS', 'MATH', 'STAT', 'ENGR', 'PHYS', 'CHEM', 'BIO', 'ECON', 'PSYCH', 'ENGL']
-        levels = [100, 200, 300, 400, 500]
+        categories = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+        tiers = [1, 2, 3, 4, 5]
         
         courses = []
         for i in range(self.n_items):
-            dept = np.random.choice(departments)
-            level = np.random.choice(levels)
-            item_id = f"{dept}{level}_{i:05d}"
-            difficulty = np.random.uniform(1, 5)
-            workload = np.random.uniform(1, 5)
+            category = np.random.choice(categories)
+            tier = np.random.choice(tiers)
+            item_id = f"{category}{tier}_{i:05d}"
+            popularity = np.random.uniform(1, 5)
+            quality = np.random.uniform(1, 5)
             
             courses.append({
                 'item_id': item_id,
-                'department': dept,
-                'level': level,
-                'difficulty': difficulty,
-                'workload': workload
+                'category': category,
+                'tier': tier,
+                'popularity': popularity,
+                'quality': quality
             })
         
         return pd.DataFrame(courses)
     
     def generate_student_profiles(self):
         """Generate user metadata"""
-        majors = ['Computer Science', 'Mathematics', 'Statistics', 'Engineering', 
-                  'Physics', 'Data Science', 'Information Systems']
+        segments = ['Segment A', 'Segment B', 'Segment C', 'Segment D', 
+                    'Segment E', 'Segment F', 'Segment G']
         
         students = []
         for i in range(self.n_users):
-            user_id = f"STU_{i+1:03d}"
-            major = np.random.choice(majors)
-            gpa = np.random.uniform(2.5, 4.0)
-            year = np.random.choice([1, 2, 3, 4, 5])
+            user_id = f"USER_{i+1:03d}"
+            segment = np.random.choice(segments)
+            activity_score = np.random.uniform(0.0, 1.0)
+            engagement_level = np.random.choice([1, 2, 3, 4, 5])
             
             students.append({
                 'user_id': user_id,
-                'major': major,
-                'gpa': gpa,
-                'year': year
+                'segment': segment,
+                'activity_score': activity_score,
+                'engagement_level': engagement_level
             })
         
         return pd.DataFrame(students)
@@ -87,11 +87,11 @@ class AcademicDataGenerator:
         noise = np.random.normal(0, 0.5, (self.n_users, self.n_items))
         ratings = np.clip(base_ratings + noise, 1, 5)
         
-        # Apply sparsity (students only rate courses they've taken)
+        # Apply sparsity (users only rate items they've interacted with)
         mask = np.random.random((self.n_users, self.n_items)) > self.sparsity
         ratings = np.where(mask, ratings, 0)
         
-        # Ensure each user has rated at least some courses
+        # Ensure each user has rated at least some items
         for i in range(self.n_users):
             if ratings[i].sum() == 0:
                 n_rated = np.random.randint(5, 20)
@@ -104,7 +104,7 @@ class AcademicDataGenerator:
         """Generate complete dataset"""
         os.makedirs(output_dir, exist_ok=True)
         
-        print(f"Generating dataset with {self.n_users} students and {self.n_items} courses...")
+        print(f"Generating dataset with {self.n_users} users and {self.n_items} items...")
         
         # Generate components
         item_df = self.generate_course_features()
@@ -134,8 +134,8 @@ class AcademicDataGenerator:
         self._generate_data_dictionary(output_dir, item_df, user_df, ratings_df)
         
         print(f"Dataset generated successfully!")
-        print(f"  - Students: {self.n_users}")
-        print(f"  - Courses: {self.n_items}")
+        print(f"  - Users: {self.n_users}")
+        print(f"  - Items: {self.n_items}")
         print(f"  - Total ratings: {len(ratings_list)}")
         print(f"  - Sparsity: {(1 - len(ratings_list)/(self.n_users * self.n_items))*100:.2f}%")
         
@@ -144,33 +144,33 @@ class AcademicDataGenerator:
     def _generate_data_dictionary(self, output_dir, item_df, user_df, ratings_df):
         """Generate data dictionary documentation"""
         dictionary = f"""# Data Dictionary
-## Matrix Mining in Academic Ecosystems Dataset
+## MineMatrix Recommender System Dataset
 
 **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-**Source:** Synthetic data based on ISU academic patterns
+**Source:** Synthetic data for recommendation system testing
 
 ### Dataset Specifications
-- **Rows (Students):** {self.n_users}
-- **Columns (Courses):** {self.n_items}
+- **Rows (Users):** {self.n_users}
+- **Columns (Items):** {self.n_items}
 - **Total Ratings:** {len(ratings_df)}
 - **Sparsity:** {(1 - len(ratings_df)/(self.n_users * self.n_items))*100:.2f}%
 
 ### Files
 
 #### 1. students.csv
-User demographic and academic information
-- `user_id`: Unique user identifier (STU_001 to STU_{self.n_users:03d})
-- `major`: User's major program
-- `gpa`: Grade Point Average (2.5-4.0)
-- `year`: Academic year (1-5)
+User profile information
+- `user_id`: Unique user identifier (USER_001 to USER_{self.n_users:03d})
+- `segment`: User segment classification
+- `activity_score`: User activity level (0.0-1.0)
+- `engagement_level`: User engagement level (1-5)
 
 #### 2. courses.csv
 Item catalog information
-- `item_id`: Unique item identifier (DEPT###_#####)
-- `department`: Academic department code
-- `level`: Item level (100-500)
-- `difficulty`: Perceived difficulty (1-5)
-- `workload`: Expected workload hours (1-5)
+- `item_id`: Unique item identifier (CAT#_#####)
+- `category`: Item category code
+- `tier`: Item tier level (1-5)
+- `popularity`: Item popularity score (1-5)
+- `quality`: Item quality score (1-5)
 
 #### 3. ratings.csv
 User item ratings (sparse format)
@@ -179,20 +179,20 @@ User item ratings (sparse format)
 - `rating`: Rating score (1-5 scale)
 
 #### 4. ratings_matrix.npy
-Dense matrix format (students × courses)
-- Rows: Students
-- Columns: Courses
+Dense matrix format (users × items)
+- Rows: Users
+- Columns: Items
 - Values: Ratings (0 = not rated)
 
 ### Data Collection Methodology
-This synthetic dataset simulates realistic academic item rating patterns using:
+This synthetic dataset simulates realistic user-item rating patterns using:
 1. Latent factor models to create user-item affinity patterns
-2. Department and level-based item clustering
-3. Realistic sparsity (students only rate courses they've taken)
+2. Category and tier-based item clustering
+3. Realistic sparsity (users only rate items they've interacted with)
 4. Gaussian noise to simulate rating variability
 
 ### Usage Notes
-- Zero values in the matrix indicate unrated courses (not low ratings)
+- Zero values in the matrix indicate unrated items (not low ratings)
 - Ratings follow a 1-5 scale (1=Poor, 5=Excellent)
 - Dataset designed for collaborative filtering and matrix factorization experiments
 """

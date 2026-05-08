@@ -83,6 +83,51 @@
 <script>
 const pcaRunBtn = document.getElementById('pca-run-btn');
 
+// Check if results already exist on page load
+const existingResults = {{ pca_results | tojson | safe }} || null;
+
+if (existingResults) {
+  // Display existing results
+  displayPCAResults(existingResults, true);
+  appendLog('pca-log-body', '[INFO] Loaded cached PCA results', 'info');
+}
+
+function displayPCAResults(results, isFromCache = false) {
+  if (isFromCache) {
+    // Cached results have raw decimal values
+    document.getElementById('pca-variance').textContent = (results.total_variance_explained * 100).toFixed(2) + '%';
+    document.getElementById('pca-pc1').textContent = ((results.explained_variance_ratio[0] || 0) * 100).toFixed(2) + '%';
+    document.getElementById('pca-pc2').textContent = ((results.explained_variance_ratio[1] || 0) * 100).toFixed(2) + '%';
+  } else {
+    // SSE results already have percentages
+    document.getElementById('pca-variance').textContent = results.total_variance + '%';
+    document.getElementById('pca-pc1').textContent = (results.explained_variance[0] || 0).toFixed(2) + '%';
+    document.getElementById('pca-pc2').textContent = (results.explained_variance[1] || 0).toFixed(2) + '%';
+  }
+  document.getElementById('pca-k').textContent = results.n_components;
+  showElements(['pca-metrics-row']);
+
+  const tbody = document.getElementById('pca-table-body');
+  tbody.innerHTML = '';
+  
+  if (isFromCache) {
+    // Cached results use explained_variance_ratio (decimals)
+    results.explained_variance_ratio.forEach((v, i) => {
+      tbody.innerHTML += `<tr><td>PC${i+1}</td><td>${(v * 100).toFixed(2)}%</td><td>${(results.cumulative_variance[i] * 100).toFixed(2)}%</td></tr>`;
+    });
+  } else {
+    // SSE results use explained_variance (already percentages)
+    results.explained_variance.forEach((v, i) => {
+      tbody.innerHTML += `<tr><td>PC${i+1}</td><td>${v.toFixed(2)}%</td><td>${results.cumulative_variance[i].toFixed(2)}%</td></tr>`;
+    });
+  }
+  showElements(['pca-table-card']);
+
+  const chartWrap = document.getElementById('pca-chart-wrap');
+  showElements(['pca-chart-card']);
+  fetchChart('/api/chart/pca', chartWrap);
+}
+
 pcaRunBtn.addEventListener('click', () => {
   const n = parseInt(document.getElementById('pca-n').value) || 10;
   clearLog('pca-log-body');
@@ -93,23 +138,7 @@ pcaRunBtn.addEventListener('click', () => {
   startSSEStream(`/run/pca?n=${n}`, 'pca-log-body', (results) => {
     pcaRunBtn.disabled = false;
     pcaRunBtn.innerHTML = '<span class="btn-icon">▶</span> Run PCA';
-
-    document.getElementById('pca-variance').textContent = results.total_variance + '%';
-    document.getElementById('pca-pc1').textContent = (results.explained_variance[0] || 0).toFixed(2) + '%';
-    document.getElementById('pca-pc2').textContent = (results.explained_variance[1] || 0).toFixed(2) + '%';
-    document.getElementById('pca-k').textContent = results.n_components;
-    showElements(['pca-metrics-row']);
-
-    const tbody = document.getElementById('pca-table-body');
-    tbody.innerHTML = '';
-    results.explained_variance.forEach((v, i) => {
-      tbody.innerHTML += `<tr><td>PC${i+1}</td><td>${v.toFixed(2)}%</td><td>${results.cumulative_variance[i].toFixed(2)}%</td></tr>`;
-    });
-    showElements(['pca-table-card']);
-
-    const chartWrap = document.getElementById('pca-chart-wrap');
-    showElements(['pca-chart-card']);
-    fetchChart('/api/chart/pca', chartWrap);
+    displayPCAResults(results, false);
   });
 });
 

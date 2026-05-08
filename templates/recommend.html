@@ -117,15 +117,38 @@ document.getElementById('rec-run-btn').addEventListener('click', async () => {
     const recs = data.recommendations;
     if (recs.length > 0) {
       const cols = Object.keys(recs[0]);
+      
+      // Filter out unwanted columns (academic-specific and internal fields)
+      const hiddenColumns = [
+        'actual_rating',    // Internal field
+        'department',       // Academic-specific
+        'level',            // Academic-specific
+        'difficulty',       // Academic-specific (old)
+        'workload',         // Academic-specific (old)
+        'category',         // Generic but not needed for display
+        'tier',             // Generic but not needed for display
+        'popularity',       // Can be hidden if not relevant
+        'quality'           // Can be hidden if not relevant
+      ];
+      const visibleCols = cols.filter(c => !hiddenColumns.includes(c));
+      
       const thead = document.getElementById('rec-thead');
-      thead.innerHTML = '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
+      // Replace "predicted_rating" header with "match"
+      thead.innerHTML = '<tr>' + visibleCols.map(c => {
+        const displayName = c === 'predicted_rating' ? 'match' : c.replace(/_/g,' ');
+        return `<th>${displayName}</th>`;
+      }).join('') + '</tr>';
 
       const tbody = document.getElementById('rec-tbody');
       tbody.innerHTML = '';
       recs.forEach((row, i) => {
-        let cells = cols.map(c => {
+        let cells = visibleCols.map(c => {
           const val = row[c];
-          if (c === 'predicted_rating') return `<td><span class="rating-chip">${typeof val === 'number' ? val.toFixed(2) : val}</span></td>`;
+          if (c === 'predicted_rating') {
+            // Convert 1-5 rating to 0-100% match
+            const matchPercent = typeof val === 'number' ? Math.round((val / 5.0) * 100) : 0;
+            return `<td><span class="rating-chip">${matchPercent}%</span></td>`;
+          }
           return `<td>${val ?? '—'}</td>`;
         }).join('');
         tbody.innerHTML += `<tr>${cells}</tr>`;
